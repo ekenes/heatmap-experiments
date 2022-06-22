@@ -1,0 +1,221 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+
+    <title>
+      Binning - basic configuration | Sample | ArcGIS API for JavaScript 4.24
+    </title>
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+      #infoDiv {
+        padding: 10px;
+      }
+
+      #timeSlider {
+        position: absolute;
+        left: 5%;
+        right: 5%;
+        bottom: 20px;
+      }
+    </style>
+
+    <script
+      type="module"
+      src="https://js.arcgis.com/calcite-components/1.0.0-beta.83/calcite.esm.js"
+    ></script>
+    <script
+      nomodule=""
+      src="https://js.arcgis.com/calcite-components/1.0.0-beta.83/calcite.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://js.arcgis.com/calcite-components/1.0.0-beta.83/calcite.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.24/esri/themes/dark/main.css"
+    />
+    <script src="https://js.arcgis.com/4.24/"></script>
+
+    <script type="text/javascript">
+      require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/widgets/Legend",
+        "esri/widgets/Expand",
+        "esri/widgets/Home",
+        "esri/widgets/TimeSlider",
+        "esri/Color",
+        "esri/core/lang"
+      ], function (
+        Map,
+        MapView,
+        FeatureLayer,
+        Legend,
+        Expand,
+        Home,
+        TimeSlider,
+        Color,
+        esriLang
+      ) {
+
+        const colors = ["#b397b3", "#bd84bd", "#c672c6", "#d05fd0", "#d94cd9", "#e339e3", "#ec26ec", "#f613f6", "#ff00ff", "#ff3bbf", "#ff7580", "#ffb040", "#ffea00"];
+
+        const year = 2020;
+        const layer = new FeatureLayer({
+          title: "Motor vehicle crashes (2020)",
+          url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/NYC_motor_crashes/FeatureServer/0",
+          popupTemplate: {
+            title: "Crash location",
+            content: [
+              {
+                type: "fields",
+                fieldInfos: [
+                  {
+                    fieldName: "CRASH_DATE",
+                    label: "Date",
+                    dateFormat: "day-short-month-year-long-time"
+                  },
+                  {
+                    fieldName: "NUMBER_OF_PERSONS_KILLED",
+                    label: "Fatalities"
+                  },
+                  {
+                    fieldName: "NUMBER_OF_PERSONS_INJURED",
+                    label: "Injuries"
+                  }
+                ]
+              }
+            ]
+          },
+          definitionExpression: `CRASH_DATE > Date '12-31-${
+            year - 1
+          }' AND CRASH_DATE < Date '01-01-${year + 1}'`,
+          renderer: {
+            type: "heatmap",
+            colorStops: createColorStops(colors),
+            maxDensity: 0.027,
+            minDensity: 0,
+            radius: 12
+          }
+        });
+
+        function createColorStops (ramp){
+          const colors = esriLang.clone(ramp);
+          const firstColora = new Color(colors.shift());
+          firstColora.a = 0;
+          const firstColorb = firstColora.clone();
+          firstColorb.a = 0.01;
+
+          const b = colors.length;
+          const stops = [
+            { color: firstColora, ratio: 0 },
+            { color: firstColorb, ratio: 0.01 },
+            { color: firstColorb, ratio: 0.01 },
+            { color: firstColorb, ratio: 0.01 },
+            ...colors.map((c, i) => {
+              const ratio = (b-(b-(i+1)))/b;
+              const color = new Color(c);
+              color.a = ratio;
+              return {
+                color,
+                ratio
+              };
+            })
+          ];
+          return stops;
+        }
+
+        const map = new Map({
+          basemap: "dark-gray-vector",
+          layers: [layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-73.9304, 40.6971],
+          scale: 144447,
+          constraints: {
+            snapToZoom: false
+          }
+        });
+
+        view.ui.add(
+          new Home({
+            view: view
+          }),
+          "top-left"
+        );
+
+        const legend = new Legend({
+          view: view,
+          container: "legendDiv"
+        });
+
+        const infoDiv = document.getElementById("infoDiv");
+        view.ui.add(
+          new Expand({
+            view: view,
+            content: infoDiv,
+            expandIconClass: "esri-icon-layer-list",
+            expanded: true
+          }),
+          "top-left"
+        );
+
+        const toggleButton = document.getElementById("showBins");
+        toggleButton.onclick = () => {
+          const renderer = layer.renderer.clone();
+          renderer.referenceScale = renderer.referenceScale ? null : view.scale;
+          layer.renderer = renderer;
+        };
+
+        // time slider widget initialization
+        const timeSlider = new TimeSlider({
+          container: "timeSlider",
+          view: view,
+          timeVisible: false,
+          fullTimeExtent: {
+            start: new Date(Date.UTC(2020,0,1)),
+            end: new Date(Date.UTC(2020,11,31))
+          },
+          stops: {
+            interval: {
+              value: 1,
+              unit: "weeks"
+            }
+          },
+          loop: true,
+          playRate: 500
+        });
+
+      });
+    </script>
+  </head>
+  <body>
+    <div id="viewDiv"></div>
+    <div id="timeSlider"></div>
+    <div id="infoDiv" class="esri-widget">
+      <calcite-button id="showBins" secondary width="full"
+        >Toggle reference scale</calcite-button
+      >
+      <div id="legendDiv"></div>
+    </div>
+  </body>
+</html>

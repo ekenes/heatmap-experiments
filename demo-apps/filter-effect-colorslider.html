@@ -1,0 +1,227 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <!--
+     ArcGIS API for JavaScript, https://js.arcgis.com
+     For more information about the widgets-histogramrangeslider sample,
+     read the original sample description at developers.arcgis.com.
+     https://developers.arcgis.com/javascript/latest/sample-code/widgets-histogramrangeslider/
+     -->
+    <title>
+      HistogramRangeSlider | Sample | ArcGIS API for JavaScript 4.24
+    </title>
+
+    <link
+      rel="stylesheet"
+      href="https://jsdev.arcgis.com/4.24/esri/themes/dark/main.css"
+    />
+    <script src="https://jsdev.arcgis.com/4.24/"></script>
+
+    <style>
+      html,
+       body,
+       #viewDiv {
+         padding: 0;
+         margin: 0;
+         height: 100%;
+         width: 100%;
+       }
+
+       #controls {
+         width: 500px;
+       }
+
+       #outer-container {
+         padding: 15px;
+         width: 500px;
+       }
+
+       #description{
+         padding: 10px 10px 0px 10px;
+         font-size: 14pt;
+       }
+
+       #titleDiv {
+         padding: 10px;
+       }
+
+       #titleText {
+         font-size: 20pt;
+         font-weight: 60;
+         padding-bottom: 10px;
+       }
+      #heatmap-slider{
+        padding: 10px;
+      }
+    </style>
+
+    <script>
+      require([
+        "esri/views/MapView",
+        "esri/Map",
+        "esri/layers/CSVLayer",
+        "esri/widgets/Expand",
+        "esri/widgets/HistogramRangeSlider",
+        "esri/widgets/Slider",
+        "esri/widgets/smartMapping/HeatmapSlider",
+        "esri/smartMapping/statistics/histogram",
+        "esri/core/promiseUtils",
+        "esri/core/reactiveUtils",
+        "esri/renderers/support/HeatmapColorStop"
+      ], (
+        MapView,
+        Map,
+        CSVLayer,
+        Expand,
+        HistogramRangeSlider,
+        Slider,
+        HeatmapSlider,
+        histogram,
+        promiseUtils,
+        reactiveUtils,
+        HeatmapColorStop
+      ) => {
+        // flash flood warnings layer
+        const renderer = {
+          type: "heatmap",
+          colorStops: [
+            { color: "rgba(63, 40, 102, 0)", ratio: 0 },
+            { color: "rgba(63, 40, 102, 0)", ratio: 0 },
+            { color: "rgba(63, 40, 102, 0)", ratio: 0 },
+            { color: "#472b77", ratio: 0.083 },
+            { color: "#4e2d87", ratio: 0.166 },
+            { color: "#563098", ratio: 0.249 },
+            { color: "#5d32a8", ratio: 0.332 },
+            { color: "#6735be", ratio: 0.415 },
+            { color: "#7139d4", ratio: 0.498 },
+            { color: "#7b3ce9", ratio: 0.581 },
+            { color: "#853fff", ratio: 0.664 },
+            { color: "#a46fbf", ratio: 0.747 },
+            { color: "#c29f80", ratio: 0.83 },
+            { color: "#e0cf40", ratio: 0.913 },
+            { color: "#ffff00", ratio: 1 }
+          ],
+          maxDensity: 0.02,
+          minDensity: 0,
+          radius: 14
+        };
+
+        const layer = new CSVLayer({
+          url: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv",
+          title: "Magnitude 2.5+ earthquakes from the last week",
+          copyright: "USGS Earthquakes",
+          renderer: renderer
+        });
+
+        const map = new Map({
+          basemap: "gray-vector",
+          layers: [layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          map: map,
+          center: [-100, 35]
+        });
+
+        view.whenLayerView(layer).then((layerView) => {
+          const field = "mag";
+
+          histogram({
+            layer: layer,
+            field: field,
+            numBins: 30
+          }).then((histogramResponse) => {
+            const { minValue, maxValue, bins } = histogramResponse;
+            const slider = new HistogramRangeSlider({
+              bins: histogramResponse.bins,
+              min: minValue,
+              max: maxValue,
+              values: [minValue, maxValue],
+              excludedBarColor: "#524e4e",
+              rangeType: "between",
+              container: document.getElementById("slider-container")
+            });
+
+            slider.on(
+              ["thumb-change", "thumb-drag", "segment-drag"],
+              (event) => {
+                filterByHistogramRange(field).catch((error) => {
+                  if (error.name !== "AbortError") {
+                    console.error(error);
+                  }
+                });
+              }
+            );
+
+            const filterByHistogramRange = promiseUtils.debounce((field) => {
+              layer.featureEffect = {
+                filter: {
+                  where: slider.generateWhereClause(field)
+                },
+                excludedEffect: "grayscale(100%) opacity(70%) blur(3px)"
+              }
+            });
+
+            const filterExpand = new Expand({
+              view: view,
+              content: document.getElementById("controls"),
+              expandIconClass: "esri-icon-filter",
+              expanded: true
+            });
+
+            view.ui.add(filterExpand, "bottom-left");
+            view.ui.add("titleDiv", "top-right");
+            var influenceSlider = new Slider({
+              container: "influence-slider",
+              min: 2,
+              max: 30,
+              values: [10]
+            });
+
+            influenceSlider.watch("values", (values) => {
+              const renderer = layer.renderer.clone();
+              renderer.radius = values[0];
+              layer.renderer = renderer;
+            });
+            reactiveUtils.whenOnce(() => !layerView?.updating).then(() => {
+              console.log(layer.renderer.stops)
+              var heatmapSlider = new HeatmapSlider({
+                container: "heatmap-slider",
+                stops: renderer.colorStops.map(stop => new HeatmapColorStop(stop))
+              });
+
+              heatmapSlider.on("thumb-drag", () => {
+                const renderer = layer.renderer.clone();
+                // console.log(heatmapSlider.stops, renderer.colorStops)
+                renderer.colorStops = heatmapSlider.stops;
+                layer.renderer = renderer;
+              });
+            });
+          });
+        });
+
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+    <div id="titleDiv" class="esri-widget">
+      <div id="titleText">Earthquakes</div>
+      <div>Area of influence</div>
+      <div id="influence-slider"></div>
+      <div id="heatmap-slider"></div>
+    </div>
+    <div id="controls" class="esri-widget">
+      <div id="description" class="esri-widget">Magnitude</div>
+      <div id="outer-container" class="esri-widget">
+        <div id="slider-container"></div>
+      </div>
+    </div>
+  </body>
+</html>

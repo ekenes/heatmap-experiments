@@ -1,0 +1,125 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+
+    <title>
+      Label a heat map
+    </title>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.24/esri/themes/light/main.css"
+    />
+
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+
+    <script src="https://js.arcgis.com/4.24/"></script>
+
+    <script>
+      require([
+        "esri/Map",
+        "esri/layers/CSVLayer",
+        "esri/views/MapView",
+        "esri/widgets/Legend"
+      ], (Map, CSVLayer, MapView, Legend) => {
+        const url =
+          "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.csv";
+
+        const template = {
+          title: "{place}",
+          content: "Magnitude {mag} {type} hit {place} on {time}."
+        };
+
+        const b = 12;
+        const renderer = {
+          type: "heatmap",
+          colorStops: [
+            { color: "rgba(63, 40, 102, 0)", ratio: (b-12)/b },
+            { color: "rgba(63, 40, 102, 0.01)", ratio: 0.01 },
+            { color: "rgba(63, 40, 102, 0.01)", ratio: 0.01 },
+            { color: "rgba(63, 40, 102, 0.01)", ratio: 0.01 },
+            { color: "#472b77", ratio: (b-11)/b },
+            { color: "#4e2d87", ratio: (b-10)/b },
+            { color: "#563098", ratio: (b-9)/b },
+            { color: "#5d32a8", ratio: (b-8)/b },
+            { color: "#6735be", ratio: (b-7)/b },
+            { color: "#7139d4", ratio: (b-6)/b },
+            { color: "#7b3ce9", ratio: (b-5)/b },
+            { color: "#853fff", ratio: (b-4)/b },
+            { color: "#a46fbf", ratio: (b-3)/b },
+            { color: "#c29f80", ratio: (b-2)/b },
+            { color: "#e0cf40", ratio: (b-1)/b },
+            { color: "#ffff00", ratio: b/b }
+          ],
+          maxDensity: 0.25,
+          minDensity: 0,
+          radius: 10
+        };
+
+        const layer = new CSVLayer({
+          url: url,
+          title: "All earthquakes from the last month",
+          copyright: "USGS Earthquakes",
+          popupTemplate: template,
+          renderer: renderer,
+          labelsVisible: true,
+          labelingInfo: [
+            {
+              symbol: {
+                type: "text", // autocasts as new TextSymbol()
+                color: "white",
+                font: {
+                  family: "Noto Sans",
+                  size: 11
+                },
+                haloColor: "#472b77",
+                haloSize: 0.75
+              },
+              labelPlacement: "center-center",
+              labelExpressionInfo: {
+                expression: "Text($feature.mag, '#.0')"
+              },
+              where: "mag > 5"
+            }
+          ]
+        });
+
+        const map = new Map({
+          basemap: "gray-vector",
+          layers: [layer]
+        });
+
+        const view = new MapView({
+          container: "viewDiv",
+          center: [-138, 30],
+          zoom: 2,
+          map: map
+        });
+
+        view.ui.add(
+          new Legend({
+            view: view
+          }),
+          "bottom-left"
+        );
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
