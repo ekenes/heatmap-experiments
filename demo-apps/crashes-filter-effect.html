@@ -77,18 +77,6 @@
 
           const year = 2020;
 
-          const simpleRenderer = {
-            type: "simple",
-            symbol: {
-              type: "simple-marker",
-              color: "#ffde00",
-              size: 5,
-              outline: {
-                color: "#ffae00",
-                width: 0.5
-              }
-            }
-          };
           const layer = new FeatureLayer({
             title: "Motor vehicle crashes (2020)",
             url: "https://services.arcgis.com/V6ZHFr6zdgNZuVG0/ArcGIS/rest/services/NYC_motor_crashes/FeatureServer/0",
@@ -118,7 +106,6 @@
             definitionExpression: `CRASH_DATE > Date '12-31-${
               year - 1
             }' AND CRASH_DATE < Date '01-01-${year + 1}'`,
-            // renderer: simpleRenderer
             renderer: {
               type: "heatmap",
               colorStops: createColorStops(colors),
