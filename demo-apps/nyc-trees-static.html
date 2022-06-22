@@ -134,7 +134,7 @@
           "bottom-left"
         );
 
-        const toggleButton = document.getElementById("showBins");
+        const toggleButton = document.getElementById("toggleBtn");
         toggleButton.onclick = () => {
           const renderer = layer.renderer.clone();
           renderer.referenceScale = renderer.referenceScale ? null : view.scale;
@@ -149,7 +149,7 @@
   <body>
     <div id="viewDiv"></div>
     <div id="infoDiv" class="esri-widget">
-      <calcite-button id="showBins" secondary width="full">
+      <calcite-button id="toggleBtn" secondary width="full">
         Disable reference scale
       </calcite-button>
       <div id="legendDiv"></div>

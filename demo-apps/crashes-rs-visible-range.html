@@ -179,7 +179,7 @@
           "bottom-left"
         );
 
-        const toggleButton = document.getElementById("showBins");
+        const toggleButton = document.getElementById("toggleBtn");
         toggleButton.onclick = () => {
           layer.maxScale = layer.maxScale ? null : 60494;
           layer.minScale = layer.minScale ? null : 196253;
@@ -191,7 +191,7 @@
   <body>
     <div id="viewDiv"></div>
     <div id="infoDiv" class="esri-widget">
-      <calcite-button id="showBins" secondary width="full"
+      <calcite-button id="toggleBtn" secondary width="full"
         >Toggle visible scale range</calcite-button
       >
       <div id="legendDiv"></div>
