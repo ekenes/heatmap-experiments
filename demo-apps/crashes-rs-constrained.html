@@ -178,9 +178,6 @@
 
         const toggleButton = document.getElementById("toggleBtn");
         toggleButton.onclick = () => {
-          const renderer = layer.renderer.clone();
-          renderer.referenceScale = renderer.referenceScale ? null : 125196;
-          layer.renderer = renderer;
           view.constraints.maxScale = view.constraints?.maxScale ? 0 : 33003;
         };
 
